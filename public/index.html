@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shattered SMP — Get Whitelisted</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Scanline overlay -->
+  <div class="scanlines"></div>
+  <!-- Grid background -->
+  <div class="grid-bg"></div>
+
+  <div class="container">
+    <header class="header">
+      <div class="logo-glitch" data-text="SHATTERED SMP">SHATTERED SMP</div>
+      <p class="subtitle">// WHITELIST TERMINAL v2.0 //</p>
+      <div class="header-line"></div>
+    </header>
+
+    <div class="status-bar">
+      <div class="status-indicator" id="statusIndicator">
+        <span class="status-dot" id="statusDot"></span>
+        <span class="status-text" id="statusText">CHECKING SERVER...</span>
+      </div>
+      <div class="status-bar-divider">|</div>
+      <div class="player-count">
+        <span class="count-icon">☠</span>
+        <span class="count-number" id="totalWhitelisted">0</span>
+        <span class="count-label">WHITELISTED</span>
+      </div>
+    </div>
+
+    <section class="whitelist-section">
+      <h2 class="section-title">
+        <span class="bracket">[</span> GET WHITELISTED <span class="bracket">]</span>
+      </h2>
+      <p class="section-desc">Enter your Minecraft username below to join the server.</p>
+
+      <form id="whitelistForm" class="whitelist-form">
+        <div class="input-wrapper">
+          <label for="username" class="input-label">&gt; MINECRAFT USERNAME_</label>
+          <input type="text" id="username" name="username" class="username-input"
+                 placeholder="Enter username..." autocomplete="off" maxlength="16" minlength="3" required>
+          <div class="input-glow"></div>
+        </div>
+        <button type="submit" class="submit-btn" id="submitBtn">
+          <span class="btn-text">GET WHITELISTED</span>
+          <span class="btn-glitch" data-text="GET WHITELISTED">GET WHITELISTED</span>
+          <div class="btn-glow"></div>
+        </button>
+      </form>
+
+      <div class="message-container" id="messageContainer"></div>
+    </section>
+
+    <section class="activity-section">
+      <h3 class="activity-title"><span class="arrow">▶</span> RECENT WHITELIST ACTIVITY</h3>
+      <div class="activity-list" id="activityList">
+        <div class="activity-item placeholder">
+          <span class="activity-user">---</span>
+          <span class="activity-time">Waiting for activity...</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="action-buttons">
+      <button class="action-btn copy-btn" id="copyIpBtn">
+        <span class="action-icon">📋</span>
+        <span class="action-label">COPY IP</span>
+        <span class="action-feedback" id="copyFeedback">COPIED!</span>
+      </button>
+      <a href="#" class="action-btn discord-btn" id="discordBtn" target="_blank" rel="noopener">
+        <span class="action-icon">💬</span>
+        <span class="action-label">DISCORD</span>
+      </a>
+    </div>
+
+    <footer class="footer">
+      <p class="footer-text">&copy; <span class="year"></span> Shattered SMP — All rights reserved.</p>
+      <p class="footer-credit">Built with ⚡ RCON &amp; Node.js</p>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
