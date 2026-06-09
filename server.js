@@ -58,7 +58,8 @@ const whitelistLimiter = rateLimit({
 
 // --- Validation ---
 function isValidUsername(username) {
-  return /^[a-zA-Z0-9_]{3,16}$/.test(username);
+  return /^\.?[a-zA-Z0-9_]{3,16}$/.test(username);
+}
 }
 
 // --- Helper: execute RCON command ---
