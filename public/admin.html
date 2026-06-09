@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shattered SMP Admin Panel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --neon-green: #39ff14;
+      --bg-dark: #0a0a0a;
+      --font-pixel: 'Press Start 2P', cursive;
+      --font-mono: 'VT323', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg-dark);
+      color: var(--neon-green);
+      font-family: var(--font-mono);
+      padding: 2rem;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: rgba(10,20,10,0.9);
+      border: 2px solid var(--neon-green);
+      box-shadow: 0 0 20px rgba(57,255,20,0.3);
+      padding: 2rem;
+    }
+    h1 {
+      font-family: var(--font-pixel);
+      font-size: 1.5rem;
+      text-align: center;
+      margin-bottom: 2rem;
+      text-shadow: 0 0 10px var(--neon-green);
+    }
+    .stats {
+      display: flex;
+      gap: 2rem;
+      justify-content: center;
+      margin-bottom: 2rem;
+    }
+    .stat-box {
+      border: 1px solid var(--neon-green);
+      padding: 1rem;
+      text-align: center;
+      font-family: var(--font-pixel);
+      flex: 1;
+    }
+    .stat-number {
+      font-size: 2rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1.5rem;
+    }
+    th, td {
+      border: 1px solid var(--neon-green);
+      padding: 0.7rem;
+      text-align: left;
+      font-size: 1.1rem;
+    }
+    th {
+      background: rgba(57,255,20,0.1);
+      font-family: var(--font-pixel);
+      font-size: 0.8rem;
+    }
+    .failed {
+      color: #ff003c;
+    }
+    .success {
+      color: var(--neon-green);
+    }
+    button {
+      background: transparent;
+      border: 2px solid var(--neon-green);
+      color: var(--neon-green);
+      font-family: var(--font-mono);
+      font-size: 1.2rem;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>SHATTERED SMP ADMIN</h1>
+    <button id="refreshBtn">REFRESH DATA</button>
+    <div class="stats">
+      <div class="stat-box">
+        <div>Total Requests</div>
+        <div class="stat-number" id="totalRequests">0</div>
+      </div>
+      <div class="stat-box">
+        <div>Successful</div>
+        <div class="stat-number success" id="successfulRequests">0</div>
+      </div>
+      <div class="stat-box">
+        <div>Failed</div>
+        <div class="stat-number failed" id="failedRequests">0</div>
+      </div>
+    </div>
+    <table id="requestsTable">
+      <thead>
+        <tr>
+          <th>Username</th>
+          <th>Timestamp</th>
+          <th>Status</th>
+          <th>Error</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <script src="admin.js"></script>
+</body>
+</html>
