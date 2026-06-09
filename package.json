@@ -1,0 +1,21 @@
+{
+  "name": "shattered-smp-whitelist",
+  "version": "2.0.0",
+  "description": "Automatic Minecraft whitelist via RCON with a cyberpunk dashboard",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.4",
+    "helmet": "^7.1.0",
+    "minecraft-rcon": "^1.0.1",
+    "cors": "^2.8.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
