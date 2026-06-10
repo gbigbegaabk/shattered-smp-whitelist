@@ -3,7 +3,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const { Rcon } = require('minecraft-rcon');
+const Rcon = require('minecraft-rcon');  // <-- changed from { Rcon }
 const fs = require('fs');
 const path = require('path');
 
@@ -20,7 +20,7 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin-secret';
 
 // --- In‑memory storage with file persistence ---
 const DATA_FILE = path.join(__dirname, 'whitelist_data.json');
-let whitelistRequests = []; // array of { username, timestamp, status, error? }
+let whitelistRequests = [];
 
 // Load existing data
 try {
@@ -42,15 +42,14 @@ function saveData() {
 }
 
 // --- Middleware ---
-app.use(helmet({ contentSecurityPolicy: false })); // allows inline styles/scripts
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public'))); // serve static files
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Rate limiting for whitelist endpoint
 const whitelistLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 5, // 5 requests per minute per IP
+  windowMs: 60 * 1000,
+  max: 5,
   message: { success: false, error: 'Too many requests, please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -76,17 +75,15 @@ async function executeRcon(command) {
 }
 
 // --- API Routes ---
-// Server status (lightweight RCON ping)
 app.get('/api/server-status', async (req, res) => {
   try {
-    await executeRcon('list'); // any command that doesn't change state
+    await executeRcon('list');
     res.json({ online: true });
   } catch (err) {
     res.json({ online: false });
   }
 });
 
-// Total whitelisted players (unique successful usernames)
 app.get('/api/total-whitelisted', (req, res) => {
   const uniquePlayers = new Set(
     whitelistRequests
@@ -96,7 +93,6 @@ app.get('/api/total-whitelisted', (req, res) => {
   res.json({ total: uniquePlayers.size });
 });
 
-// Recent activity (last 10 requests)
 app.get('/api/recent-activity', (req, res) => {
   const recent = [...whitelistRequests]
     .reverse()
@@ -105,7 +101,6 @@ app.get('/api/recent-activity', (req, res) => {
   res.json(recent);
 });
 
-// Whitelist a player
 app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
   const { username } = req.body;
   if (!username || !isValidUsername(username)) {
@@ -114,7 +109,6 @@ app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
 
   const cleanUsername = username.trim();
 
-  // Check for duplicate (exact match, case‑insensitive)
   const alreadyWhitelisted = whitelistRequests.some(
     r => r.username.toLowerCase() === cleanUsername.toLowerCase() && r.status === 'success'
   );
@@ -128,11 +122,10 @@ app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
 
   try {
     const commandResponse = await executeRcon(`whitelist add ${cleanUsername}`);
-    // Minecraft RCON response for whitelist add: "Added <name> to the whitelist" or "Player is already whitelisted"
     if (commandResponse.toLowerCase().includes('added')) {
       status = 'success';
     } else if (commandResponse.toLowerCase().includes('already')) {
-      status = 'success'; // treat as success for the dashboard (they are whitelisted)
+      status = 'success';
       errorMessage = 'Player was already whitelisted on the server.';
     } else {
       errorMessage = `Unexpected server response: ${commandResponse}`;
@@ -142,7 +135,6 @@ app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
     errorMessage = 'Failed to connect to the server. Please try again later.';
   }
 
-  // Save request
   const requestEntry = {
     username: cleanUsername,
     timestamp,
@@ -159,7 +151,6 @@ app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
   }
 });
 
-// --- Admin API (protected) ---
 function adminAuth(req, res, next) {
   const token = req.headers['x-admin-token'] || req.query.token;
   if (token === ADMIN_TOKEN) {
@@ -173,12 +164,10 @@ app.get('/api/admin/requests', adminAuth, (req, res) => {
   res.json(whitelistRequests);
 });
 
-// Serve admin page
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
-// Provide environment variables to frontend (only public ones)
 app.get('/api/config', (req, res) => {
   res.json({
     minecraft_ip: MINECRAFT_IP,
@@ -186,7 +175,6 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-// --- Start server ---
 app.listen(PORT, () => {
   console.log(`Shattered SMP Whitelist running on port ${PORT}`);
 });
