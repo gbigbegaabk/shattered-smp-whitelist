@@ -3,7 +3,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const { Rcon } = require('rcon-client');          // changed import
+const { Rcon } = require('rcon-client');
 const fs = require('fs');
 const path = require('path');
 
@@ -61,21 +61,28 @@ function isValidUsername(username) {
   return /^\.?[a-zA-Z0-9_]{3,16}$/.test(username);
 }
 
-// --- Helper: execute RCON command (using rcon-client) ---
+// --- Helper: execute RCON command (crash‑safe) ---
 async function executeRcon(command) {
-  const rcon = await Rcon.connect({
-    host: RCON_HOST,
-    port: RCON_PORT,
-    password: RCON_PASSWORD
-  });
+  let rcon;
 
   try {
+    rcon = await Rcon.connect({
+      host: RCON_HOST,
+      port: RCON_PORT,
+      password: RCON_PASSWORD
+    });
+
     const response = await rcon.send(command);
-    await rcon.end();
     return response;
   } catch (err) {
-    await rcon.end().catch(() => {});
+    console.error("RCON ERROR:", err);
     throw err;
+  } finally {
+    if (rcon) {
+      try {
+        await rcon.end();
+      } catch {}
+    }
   }
 }
 
