@@ -3,7 +3,7 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const Rcon = require('minecraft-rcon');  // <-- changed from { Rcon }
+const { Rcon } = require('rcon-client');          // changed import
 const fs = require('fs');
 const path = require('path');
 
@@ -47,6 +47,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Rate limiting for whitelist endpoint
 const whitelistLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
@@ -60,21 +61,26 @@ function isValidUsername(username) {
   return /^\.?[a-zA-Z0-9_]{3,16}$/.test(username);
 }
 
-// --- Helper: execute RCON command ---
+// --- Helper: execute RCON command (using rcon-client) ---
 async function executeRcon(command) {
-  const rcon = new Rcon(RCON_HOST, RCON_PORT, RCON_PASSWORD);
+  const rcon = await Rcon.connect({
+    host: RCON_HOST,
+    port: RCON_PORT,
+    password: RCON_PASSWORD
+  });
+
   try {
-    await rcon.connect();
     const response = await rcon.send(command);
-    await rcon.disconnect();
-    return response.trim();
+    await rcon.end();
+    return response;
   } catch (err) {
-    await rcon.disconnect().catch(() => {});
+    await rcon.end().catch(() => {});
     throw err;
   }
 }
 
 // --- API Routes ---
+// Server status (lightweight RCON ping)
 app.get('/api/server-status', async (req, res) => {
   try {
     await executeRcon('list');
@@ -84,6 +90,7 @@ app.get('/api/server-status', async (req, res) => {
   }
 });
 
+// Total whitelisted players (unique successful usernames)
 app.get('/api/total-whitelisted', (req, res) => {
   const uniquePlayers = new Set(
     whitelistRequests
@@ -93,6 +100,7 @@ app.get('/api/total-whitelisted', (req, res) => {
   res.json({ total: uniquePlayers.size });
 });
 
+// Recent activity (last 10 requests)
 app.get('/api/recent-activity', (req, res) => {
   const recent = [...whitelistRequests]
     .reverse()
@@ -101,6 +109,7 @@ app.get('/api/recent-activity', (req, res) => {
   res.json(recent);
 });
 
+// Whitelist a player
 app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
   const { username } = req.body;
   if (!username || !isValidUsername(username)) {
@@ -109,6 +118,7 @@ app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
 
   const cleanUsername = username.trim();
 
+  // Check for duplicate (case-insensitive)
   const alreadyWhitelisted = whitelistRequests.some(
     r => r.username.toLowerCase() === cleanUsername.toLowerCase() && r.status === 'success'
   );
@@ -135,6 +145,7 @@ app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
     errorMessage = 'Failed to connect to the server. Please try again later.';
   }
 
+  // Save request
   const requestEntry = {
     username: cleanUsername,
     timestamp,
@@ -151,6 +162,7 @@ app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
   }
 });
 
+// --- Admin API (protected) ---
 function adminAuth(req, res, next) {
   const token = req.headers['x-admin-token'] || req.query.token;
   if (token === ADMIN_TOKEN) {
@@ -164,10 +176,12 @@ app.get('/api/admin/requests', adminAuth, (req, res) => {
   res.json(whitelistRequests);
 });
 
+// Serve admin page
 app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+// Provide environment variables to frontend (only public ones)
 app.get('/api/config', (req, res) => {
   res.json({
     minecraft_ip: MINECRAFT_IP,
@@ -175,6 +189,7 @@ app.get('/api/config', (req, res) => {
   });
 });
 
+// --- Start server ---
 app.listen(PORT, () => {
   console.log(`Shattered SMP Whitelist running on port ${PORT}`);
 });
