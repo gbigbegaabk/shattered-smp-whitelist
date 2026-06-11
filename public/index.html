@@ -41,6 +41,21 @@
       </h2>
       <p class="section-desc">Enter your Minecraft username below to join the server.</p>
 
+      <!-- EDITION SELECTOR (JAVA / BEDROCK) -->
+      <div class="edition-selector">
+        <label class="edition-option">
+          <input type="radio" name="edition" value="java" checked>
+          <span class="edition-label">☕ JAVA</span>
+        </label>
+        <label class="edition-option">
+          <input type="radio" name="edition" value="bedrock">
+          <span class="edition-label">🧱 BEDROCK</span>
+        </label>
+        <div class="prefix-hint" id="prefixHint">
+          Bedrock usernames will get a <strong>.</strong> prefix automatically
+        </div>
+      </div>
+
       <form id="whitelistForm" class="whitelist-form">
         <div class="input-wrapper">
           <label for="username" class="input-label">&gt; MINECRAFT USERNAME_</label>
