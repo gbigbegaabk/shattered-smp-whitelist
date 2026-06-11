@@ -11,9 +11,47 @@ document.addEventListener('DOMContentLoaded', () => {
   const copyFeedback = document.getElementById('copyFeedback');
   const discordBtn = document.getElementById('discordBtn');
   const yearSpan = document.querySelector('.year');
+  const editionRadios = document.querySelectorAll('input[name="edition"]');
+  const prefixHint = document.getElementById('prefixHint');
 
   // Set current year
   if (yearSpan) yearSpan.textContent = new Date().getFullYear();
+
+  // Update placeholder and hint based on selected edition
+  function updateEditionUI() {
+    const selected = document.querySelector('input[name="edition"]:checked').value;
+    if (selected === 'bedrock') {
+      usernameInput.placeholder = 'Enter Bedrock username...';
+      if (prefixHint) prefixHint.style.opacity = '1';
+      // Optional: live preview of final username with dot
+      updateBedrockPreview();
+    } else {
+      usernameInput.placeholder = 'Enter Java username...';
+      if (prefixHint) prefixHint.style.opacity = '0.5';
+    }
+  }
+
+  function updateBedrockPreview() {
+    const raw = usernameInput.value.trim();
+    if (raw && document.querySelector('input[name="edition"]:checked').value === 'bedrock') {
+      usernameInput.setAttribute('data-preview', `will be sent as: .${raw}`);
+    } else {
+      usernameInput.removeAttribute('data-preview');
+    }
+  }
+
+  // Add event listeners for edition change
+  editionRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      updateEditionUI();
+      // Clear any previous error message related to prefix
+      const msgDiv = messageContainer.querySelector('.message');
+      if (msgDiv && msgDiv.innerText.includes('dot')) msgDiv.remove();
+    });
+  });
+
+  // Listen to username input for Bedrock preview
+  usernameInput.addEventListener('input', updateBedrockPreview);
 
   // Fetch public config (IP and Discord)
   async function loadConfig() {
@@ -91,26 +129,61 @@ document.addEventListener('DOMContentLoaded', () => {
     messageContainer.innerHTML = `<div class="message ${type}">${escapeHtml(text)}</div>`;
   }
 
-  // Handle form submission
+  // Handle form submission with edition support
   whitelistForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const username = usernameInput.value.trim();
-    if (!username) return;
+    let rawUsername = usernameInput.value.trim();
+    if (!rawUsername) return;
+
+    const selectedEdition = document.querySelector('input[name="edition"]:checked').value;
+    let finalUsername = rawUsername;
+
+    // Bedrock edition: add dot prefix (if not already present)
+    if (selectedEdition === 'bedrock') {
+      if (!rawUsername.startsWith('.')) {
+        finalUsername = '.' + rawUsername;
+      } else {
+        finalUsername = rawUsername; // already has dot
+      }
+    }
+
+    // Optional: Validate that Java usernames follow standard rules (3-16 alphanumeric/underscore)
+    if (selectedEdition === 'java') {
+      const javaRegex = /^[a-zA-Z0-9_]{3,16}$/;
+      if (!javaRegex.test(rawUsername)) {
+        showMessage('Invalid Java username. Use 3-16 letters, numbers, or underscores.', 'error');
+        return;
+      }
+    } else if (selectedEdition === 'bedrock') {
+      // Bedrock allows more characters, but we keep simple check: non-empty, max 16 (without dot)
+      if (rawUsername.length < 1 || rawUsername.length > 16) {
+        showMessage('Bedrock username must be 1-16 characters (excluding the dot).', 'error');
+        return;
+      }
+    }
 
     submitBtn.disabled = true;
     submitBtn.querySelector('.btn-text').textContent = 'PROCESSING...';
 
     try {
+      // Send the final username (with dot for bedrock) to backend
       const res = await fetch('/api/whitelist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username })
+        body: JSON.stringify({ username: finalUsername })
       });
       const data = await res.json();
 
       if (data.success) {
-        showMessage(data.message || 'Whitelisted!', 'success');
+        let successMsg = data.message || `${finalUsername} has been whitelisted!`;
+        if (selectedEdition === 'bedrock') {
+          successMsg = `✓ Bedrock user ${rawUsername} (whitelisted as ${finalUsername})`;
+        } else {
+          successMsg = `✓ Java user ${finalUsername} whitelisted!`;
+        }
+        showMessage(successMsg, 'success');
         usernameInput.value = '';
+        updateBedrockPreview(); // clear preview
       } else {
         showMessage(data.error || 'Unknown error', 'error');
       }
@@ -140,6 +213,7 @@ document.addEventListener('DOMContentLoaded', () => {
   updateServerStatus();
   updateTotalWhitelisted();
   updateRecentActivity();
+  updateEditionUI(); // set correct placeholder based on default (Java)
 
   setInterval(updateServerStatus, 30000);
   setInterval(updateRecentActivity, 15000);
