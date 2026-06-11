@@ -13,7 +13,10 @@
     "express-rate-limit": "^7.1.4",
     "helmet": "^7.1.0",
     "cors": "^2.8.5",
-    "rcon-client": "^4.2.3"
+    "rcon-client": "^4.2.3",
+    "passport": "^0.7.0",
+    "passport-discord": "^0.1.4",
+    "express-session": "^1.18.0"
   },
   "engines": {
     "node": ">=18"
