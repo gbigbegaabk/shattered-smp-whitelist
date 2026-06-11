@@ -8,6 +8,10 @@ const fs = require('fs');
 const path = require('path');
 
 const app = express();
+
+// --- Fix for proxy warnings (Render, Heroku, etc.) ---
+app.set('trust proxy', 1);
+
 const PORT = process.env.PORT || 3000;
 
 // --- Configuration ---
@@ -47,7 +51,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rate limiting for whitelist endpoint
+// Rate limiting for whitelist endpoint (now respects proxy)
 const whitelistLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
