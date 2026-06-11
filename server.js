@@ -3,6 +3,9 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const session = require('express-session');
+const passport = require('passport');
+const DiscordStrategy = require('passport-discord').Strategy;
 const { Rcon } = require('rcon-client');
 const fs = require('fs');
 const path = require('path');
@@ -19,8 +22,47 @@ const RCON_HOST = process.env.RCON_HOST;
 const RCON_PORT = parseInt(process.env.RCON_PORT, 10) || 25575;
 const RCON_PASSWORD = process.env.RCON_PASSWORD;
 const MINECRAFT_IP = process.env.MINECRAFT_IP || 'shattered.mcserver.com';
-const DISCORD_URL = process.env.DISCORD_URL || '#';
+const DISCORD_URL = process.env.DISCORD_URL || '#'; // button link, not OAuth
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'admin-secret';
+
+// Discord OAuth credentials
+const DISCORD_CLIENT_ID = process.env.DISCORD_CLIENT_ID;
+const DISCORD_CLIENT_SECRET = process.env.DISCORD_CLIENT_SECRET;
+const DISCORD_CALLBACK_URL = process.env.DISCORD_CALLBACK_URL;
+const SESSION_SECRET = process.env.SESSION_SECRET || 'default-insecure-secret';
+
+// --- Session & Passport setup ---
+app.use(session({
+  secret: SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: false } // set secure: true if using HTTPS (Render uses HTTPS)
+}));
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Serialize/deserialize user (store just Discord ID and username)
+passport.serializeUser((user, done) => {
+  done(null, { id: user.id, username: user.username });
+});
+passport.deserializeUser((obj, done) => {
+  done(null, obj);
+});
+
+// Discord OAuth Strategy
+passport.use(new DiscordStrategy({
+  clientID: DISCORD_CLIENT_ID,
+  clientSecret: DISCORD_CLIENT_SECRET,
+  callbackURL: DISCORD_CALLBACK_URL,
+  scope: ['identify']
+}, (accessToken, refreshToken, profile, done) => {
+  // profile contains id, username, discriminator, avatar, etc.
+  return done(null, {
+    id: profile.id,
+    username: profile.username,
+    discriminator: profile.discriminator
+  });
+}));
 
 // --- In‑memory storage with file persistence ---
 const DATA_FILE = path.join(__dirname, 'whitelist_data.json');
@@ -51,7 +93,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Rate limiting for whitelist endpoint (now respects proxy)
+// Rate limiting for whitelist endpoint
 const whitelistLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
@@ -65,17 +107,15 @@ function isValidUsername(username) {
   return /^\.?[a-zA-Z0-9_]{3,16}$/.test(username);
 }
 
-// --- Helper: execute RCON command (crash‑safe) ---
+// --- Helper: execute RCON command ---
 async function executeRcon(command) {
   let rcon;
-
   try {
     rcon = await Rcon.connect({
       host: RCON_HOST,
       port: RCON_PORT,
       password: RCON_PASSWORD
     });
-
     const response = await rcon.send(command);
     return response;
   } catch (err) {
@@ -83,15 +123,44 @@ async function executeRcon(command) {
     throw err;
   } finally {
     if (rcon) {
-      try {
-        await rcon.end();
-      } catch {}
+      try { await rcon.end(); } catch {}
     }
   }
 }
 
-// --- API Routes ---
-// Server status (lightweight RCON ping)
+// ========================
+// DISCORD AUTH ROUTES
+// ========================
+app.get('/auth/discord',
+  passport.authenticate('discord', { scope: ['identify'] })
+);
+
+app.get('/auth/discord/callback',
+  passport.authenticate('discord', { failureRedirect: '/' }),
+  (req, res) => {
+    // Successful authentication – redirect to dashboard or homepage
+    res.redirect('/');
+  }
+);
+
+app.get('/auth/logout', (req, res) => {
+  req.logout(() => {
+    res.redirect('/');
+  });
+});
+
+// Simple endpoint to check if user is logged in (for frontend)
+app.get('/api/auth/me', (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json({ authenticated: true, user: req.user });
+  } else {
+    res.json({ authenticated: false });
+  }
+});
+
+// ========================
+// EXISTING API ROUTES (unchanged)
+// ========================
 app.get('/api/server-status', async (req, res) => {
   try {
     await executeRcon('list');
@@ -101,7 +170,6 @@ app.get('/api/server-status', async (req, res) => {
   }
 });
 
-// Total whitelisted players (unique successful usernames)
 app.get('/api/total-whitelisted', (req, res) => {
   const uniquePlayers = new Set(
     whitelistRequests
@@ -111,7 +179,6 @@ app.get('/api/total-whitelisted', (req, res) => {
   res.json({ total: uniquePlayers.size });
 });
 
-// Recent activity (last 10 requests)
 app.get('/api/recent-activity', (req, res) => {
   const recent = [...whitelistRequests]
     .reverse()
@@ -120,7 +187,6 @@ app.get('/api/recent-activity', (req, res) => {
   res.json(recent);
 });
 
-// Whitelist a player
 app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
   const { username } = req.body;
   if (!username || !isValidUsername(username)) {
@@ -129,7 +195,6 @@ app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
 
   const cleanUsername = username.trim();
 
-  // Check for duplicate (case-insensitive)
   const alreadyWhitelisted = whitelistRequests.some(
     r => r.username.toLowerCase() === cleanUsername.toLowerCase() && r.status === 'success'
   );
@@ -156,7 +221,6 @@ app.post('/api/whitelist', whitelistLimiter, async (req, res) => {
     errorMessage = 'Failed to connect to the server. Please try again later.';
   }
 
-  // Save request
   const requestEntry = {
     username: cleanUsername,
     timestamp,
